@@ -1,0 +1,58 @@
+[package]
+name        = "sisu"
+version     = "0.1.0"
+edition     = "2021"
+description = "SISU — Dynamic Application Prioritization and Resource Management"
+
+[lib]
+# This name becomes the crate name used in main.rs: sisu_lib::run()
+# It must not contain hyphens — Rust uses underscores for crate names
+name       = "sisu_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "sisu"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri                      = { version = "2", features = ["tray-icon", "image-png"] }
+tauri-plugin-shell         = "2"
+tauri-plugin-notification  = "2"
+serde                      = { version = "1", features = ["derive"] }
+serde_json                 = "1"
+tokio                      = { version = "1", features = ["full"] }
+sysinfo                    = "0.33"
+rusqlite                   = { version = "0.32", features = ["bundled"] }
+dirs                       = "5"
+log                        = "0.4"
+env_logger                 = "0.11"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+winapi = { version = "0.3", features = [
+  "processthreadsapi",
+  "winbase",
+  "handleapi",
+  "winnt",
+  "winuser",
+  "psapi",
+] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = "0.2"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+libc = "0.2"
+
+[profile.dev]
+opt-level = 0
+debug     = true
+
+[profile.release]
+opt-level     = 3
+lto           = true
+codegen-units = 1
+panic         = "abort"
+strip         = true

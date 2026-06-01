@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Prevents the browser from guessing the MIME type of files.
+         This is a standard security header. -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+
+    <!-- The app title shown in the window title bar during development.
+         In production Tauri uses the title from tauri.conf.json instead. -->
+    <title>SISU</title>
+  </head>
+  <body>
+    <!-- React mounts into this div. It must have id="root" to match
+         the createRoot() call in src/main.tsx -->
+    <div id="root"></div>
+
+    <!-- Vite replaces this script tag at build time with the compiled
+         and bundled version of our React application -->
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

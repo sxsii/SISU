@@ -1,0 +1,52 @@
+{
+  "compilerOptions": {
+    // Target modern JavaScript — Tauri's WebView2 supports ES2020 fully
+    "target": "ES2020",
+
+    // Use the standard class field behavior (required for React 18)
+    "useDefineForClassFields": true,
+
+    // Include browser APIs (DOM, fetch, etc.) and modern JS APIs
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+
+    // Use ESModules — matches Vite's module system
+    "module": "ESNext",
+
+    // Skip type-checking of node_modules — speeds up compilation significantly
+    "skipLibCheck": true,
+
+    // Let Vite handle module resolution — "bundler" mode understands
+    // package.json "exports" fields that older modes miss
+    "moduleResolution": "bundler",
+
+    // Allow importing TypeScript files with their .ts extension explicitly
+    "allowImportingTsExtensions": true,
+
+    // Allow importing JSON files directly as modules
+    "resolveJsonModule": true,
+
+    // Each file is treated as an isolated module — required for Vite's
+    // single-file transform approach
+    "isolatedModules": true,
+
+    // Do not emit compiled JS files — Vite handles compilation itself
+    "noEmit": true,
+
+    // Use React's JSX transform — no need to import React in every file
+    "jsx": "react-jsx",
+
+    // Strict mode catches the most bugs at compile time:
+    // null checks, implicit any, strict function types, etc.
+    "strict": true,
+
+    // Catch variables declared but never used
+    "noUnusedLocals": true,
+
+    // Catch function parameters declared but never used
+    "noUnusedParameters": true,
+
+    // Catch switch statements with fallthrough (common source of bugs)
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src"]
+}

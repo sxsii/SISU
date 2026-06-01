@@ -1,0 +1,15 @@
+/* Global reset — removes browser default margins and padding
+   so our layout starts from a clean slate on all platforms */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin:     0;
+  padding:    0;
+}
+
+/* Remove the default white background from the body.
+   Tauri renders our app inside a WebView — without this reset,
+   a white flash can appear during startup before React mounts. */
+html, body, #root {
+  height:     100%;
+  background: #0f172a;
+}
