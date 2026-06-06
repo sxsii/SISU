@@ -310,72 +310,51 @@ pub fn get_process_list(
 // ============================================================
 
 pub async fn monitoring_loop(
-    state: Arc<Mutex<SystemState>>,
-    handle: AppHandle,
+    state:     Arc<Mutex<SystemState>>,
+    opt_state: Arc<Mutex<crate::optimizer::OptimizerState>>,
+    handle:    AppHandle,
 ) {
     loop {
         tokio::time::sleep(Duration::from_secs(2)).await;
 
+        // Refresh and snapshot
         let snapshot = {
             let mut sys = state.lock().unwrap();
             sys.refresh_all();
             sys.snapshot()
         };
 
-        // tauri::Emitter must be in scope (imported at top of file)
-        // for .emit() to be available on AppHandle
+        // Emit snapshot to frontend
         let _ = handle.emit("system-update", &snapshot);
 
-        // ---- CPU Alerts ----
-        if snapshot.cpu.usage_percent > 90.0 {
-            let _ = handle.emit("alert", serde_json::json!({
-                "id":      format!("cpu-{}", snapshot.timestamp),
-                "type":    "cpu_critical",
-                "message": format!("CPU usage critical: {:.1}%", snapshot.cpu.usage_percent),
-                "level":   "critical"
-            }));
-        } else if snapshot.cpu.usage_percent > 75.0 {
-            let _ = handle.emit("alert", serde_json::json!({
-                "id":      format!("cpu-{}", snapshot.timestamp),
-                "type":    "cpu_high",
-                "message": format!("CPU usage high: {:.1}%", snapshot.cpu.usage_percent),
-                "level":   "warning"
-            }));
-        }
+        // Run rule engine if optimization is enabled
+        let opt_enabled = {
+            opt_state.lock().unwrap().status.enabled
+        };
 
-        // ---- Memory Alerts ----
-        if snapshot.memory.usage_percent > 90.0 {
-            let _ = handle.emit("alert", serde_json::json!({
-                "id":      format!("mem-{}", snapshot.timestamp),
-                "type":    "memory_critical",
-                "message": format!("Memory usage critical: {:.1}%", snapshot.memory.usage_percent),
-                "level":   "critical"
-            }));
-        } else if snapshot.memory.usage_percent > 80.0 {
-            let _ = handle.emit("alert", serde_json::json!({
-                "id":      format!("mem-{}", snapshot.timestamp),
-                "type":    "memory_high",
-                "message": format!("Memory pressure high: {:.1}%", snapshot.memory.usage_percent),
-                "level":   "warning"
-            }));
-        }
+        if opt_enabled {
+            // Load active profile
+            let active_profile = crate::profiles::load_profiles()
+                .ok()
+                .and_then(|ps| ps.into_iter().find(|p| p.active));
 
-        // ---- Temperature Alerts ----
-        if let Some(temp) = snapshot.cpu.temperature {
-            if temp > 90.0 {
-                let _ = handle.emit("alert", serde_json::json!({
-                    "id":      format!("temp-{}", snapshot.timestamp),
-                    "type":    "temperature_critical",
-                    "message": format!("CPU temperature critical: {:.0}°C", temp),
-                    "level":   "critical"
-                }));
-            } else if temp > 75.0 {
-                let _ = handle.emit("alert", serde_json::json!({
-                    "id":      format!("temp-{}", snapshot.timestamp),
-                    "type":    "temperature_high",
-                    "message": format!("CPU temperature high: {:.0}°C", temp),
-                    "level":   "warning"
-                }));
+            // Build rule context
+            let ctx = crate::rules::RuleContext {
+                snapshot:        &snapshot,
+                active_profile:  active_profile.as_ref(),
+                foreground_name: "",
+            };
+
+            // Evaluate rules
+            let actions = crate::rules::evaluate(&ctx);
+
+            // Execute actions if any were triggered
+            if !actions.is_empty() {
+                let sys     = state.lock().unwrap();
+                let mut opt = opt_state.lock().unwrap();
+                crate::optimizer::execute_actions(
+                    &actions, &sys, &mut opt, &handle
+                );
             }
         }
     }

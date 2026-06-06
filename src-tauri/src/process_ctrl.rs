@@ -129,9 +129,15 @@ impl ControlResult {
     }
 }
 
+/// Returns true if a process is protected and must not be modified.
+/// Used by the optimizer to skip protected processes during bulk operations.
+pub fn is_protected(pid: u32, name: &str) -> bool {
+    check_protected(pid, name).is_some()
+}
+
 /// Check whether a process is protected.
 /// Returns Some(reason) if protected, None if safe to modify.
-fn check_protected(pid: u32, name: &str) -> Option<String> {
+pub fn check_protected(pid: u32, name: &str) -> Option<String> {
     // Check PID whitelist first — fastest check
     if PROTECTED_PIDS.contains(&pid) {
         return Some(format!(
@@ -151,6 +157,8 @@ fn check_protected(pid: u32, name: &str) -> Option<String> {
 
     None
 }
+
+
 
 // ============================================================
 // Windows Implementation

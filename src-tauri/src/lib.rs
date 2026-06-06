@@ -13,59 +13,61 @@ pub mod notifications;
 use std::sync::{Arc, Mutex};
 use tauri::Manager;
 use monitor::SystemState;
+use optimizer::OptimizerState;
+
+// ============================================================
+// AppState
+// ============================================================
 
 pub struct AppState {
-    pub system: Arc<Mutex<SystemState>>,
+    pub system:    Arc<Mutex<SystemState>>,
+    pub optimizer: Arc<Mutex<OptimizerState>>,
 }
+
+// ============================================================
+// Application Entry Point
+// ============================================================
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let optimizer_state = Arc::new(Mutex::new(OptimizerState::new()));
+    let optimizer_for_loop = optimizer_state.clone();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_notification::init())
         .invoke_handler(tauri::generate_handler![
+            // Monitoring
             monitor::get_system_snapshot,
             monitor::get_process_list,
+            // Process control
             process_ctrl::set_process_priority,
             process_ctrl::suspend_process,
             process_ctrl::resume_process,
             process_ctrl::kill_process,
             process_ctrl::set_process_affinity,
+            // Optimizer
+            optimizer::get_optimizer_status,
+            optimizer::set_optimizer_enabled,
+            // Profiles
+            profiles::load_profiles,
+            profiles::save_profile,
+            profiles::delete_profile,
+            profiles::activate_profile,
+            profiles::deactivate_profiles,
         ])
         .setup(|app| {
-            // IMPORTANT: SystemState::new() must be called here,
-            // inside setup(), NOT before Builder::default().
-            //
-            // Why: sysinfo 0.33 calls CoInitializeEx(COINIT_MULTITHREADED)
-            // on Windows when it first reads system data. Tauri's windowing
-            // library (tao) calls CoInitializeEx(COINIT_APARTMENTTHREADED)
-            // for drag-and-drop support. Windows does not allow two different
-            // COM threading modes on the same thread.
-            //
-            // By the time setup() runs, Tauri has already initialized COM
-            // for its own needs on the main thread. We therefore spawn
-            // SystemState::new() on a separate thread via
-            // tauri::async_runtime::spawn so it gets its own thread with
-            // its own COM context — avoiding the conflict entirely.
             let handle = app.handle().clone();
 
             tauri::async_runtime::spawn(async move {
-                // Initialize system state on the async thread pool.
-                // This thread is separate from the main UI thread so
-                // COM mode conflicts cannot occur.
                 let system_state = Arc::new(Mutex::new(SystemState::new()));
 
-                // Register AppState with Tauri's state management so
-                // command handlers can access it via State<AppState>.
-                // manage() can be called after setup completes.
                 handle.manage(AppState {
-                    system: system_state.clone(),
+                    system:    system_state.clone(),
+                    optimizer: optimizer_for_loop,
                 });
 
-                // Start the monitoring loop on the same async task.
-                // It runs forever, emitting system-update events every
-                // 2 seconds until the application exits.
-                monitor::monitoring_loop(system_state, handle).await;
+                monitor::monitoring_loop(system_state, optimizer_state, handle).await;
             });
 
             Ok(())

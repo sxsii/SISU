@@ -19,6 +19,7 @@ import {
 import Dashboard    from "./components/Dashboard";
 import ProcessTable from "./components/ProcessTable";
 import "./App.css";
+import ProfilesPanel from "./components/ProfilesPanel";
 
 // ---- Tab configuration ----
 // Defined outside the component so it is not recreated on every render
@@ -158,9 +159,7 @@ export default function App() {
           <ProcessTable />
         )}
         {activeTab === "profiles" && (
-          <div className="placeholder-panel">
-            <p>Profiles — coming in Phase 6</p>
-          </div>
+          <ProfilesPanel />
         )}
         {activeTab === "alerts" && (
           <div className="placeholder-panel">
