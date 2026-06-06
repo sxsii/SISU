@@ -86,7 +86,7 @@ function ContextMenu({ x, y, process: proc, onClose, onResult }: ContextMenuProp
         className="ctx-item"
         onClick={() => invoke_action("suspend_process")}
       >
-        ⏸ Suspend
+        II Suspend
       </button>
       <button
         className="ctx-item"
@@ -142,7 +142,8 @@ function Toast({ message, success, onDone }: ToastProps) {
   useEffect(() => {
     const t = setTimeout(onDone, 3500);
     return () => clearTimeout(t);
-  }, [onDone]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array — timer starts once on mount and never resets
 
   return (
     <div className={`toast ${success ? "toast-ok" : "toast-err"}`}>
@@ -164,7 +165,7 @@ export default function ProcessTable() {
     x: number; y: number; proc: ProcessInfo
   } | null>(null);
   const [toast, setToast] = useState<{
-    message: string; success: boolean
+    message: string; success: boolean; key: number
   } | null>(null);
 
   const fetchProcesses = useCallback(async () => {
@@ -296,7 +297,7 @@ export default function ProcessTable() {
           onClose={() => setCtxMenu(null)}
           onResult={(msg, ok) => {
             setCtxMenu(null);
-            setToast({ message: msg, success: ok });
+            setToast({ message: msg, success: ok, key: Date.now() });
             fetchProcesses();
           }}
         />
@@ -305,6 +306,7 @@ export default function ProcessTable() {
       {/* Toast feedback */}
       {toast && (
         <Toast
+          key={toast.key}
           message={toast.message}
           success={toast.success}
           onDone={() => setToast(null)}

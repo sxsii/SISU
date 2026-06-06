@@ -324,8 +324,8 @@ mod windows_impl {
             match open_process(pid, access) {
                 Err(e) => ControlResult::err(e),
                 Ok(handle) => {
-                    use winapi::um::processthreadsapi::SetProcessAffinityMask;
-                    let result = SetProcessAffinityMask(handle, mask as usize);
+                    use winapi::um::winbase::SetProcessAffinityMask;
+                    let result = SetProcessAffinityMask(handle, mask as u32);
                     CloseHandle(handle);
                     if result != 0 {
                         ControlResult::ok(format!(
