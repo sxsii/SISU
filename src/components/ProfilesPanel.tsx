@@ -256,12 +256,19 @@ function OptimizerToggle({ enabled, onChange }: OptimizerToggleProps) {
 
 // ---- Main ProfilesPanel component ----
 
-export default function ProfilesPanel() {
+interface ProfilesPanelProps {
+  optimEnabled:         boolean;
+  onOptimEnabledChange: (val: boolean) => void;
+}
+
+export default function ProfilesPanel({
+  optimEnabled,
+  onOptimEnabledChange,
+}: ProfilesPanelProps) {
   const [profiles,     setProfiles]     = useState<OptimizationProfile[]>([]);
   const [loading,      setLoading]      = useState(true);
   const [showForm,     setShowForm]     = useState(false);
   const [editProfile,  setEditProfile]  = useState<OptimizationProfile | null>(null);
-  const [optimEnabled, setOptimEnabled] = useState(false);
   const [feedback,     setFeedback]     = useState("");
 
   const loadProfiles = useCallback(async () => {
@@ -322,7 +329,7 @@ export default function ProfilesPanel() {
   const handleOptimizerToggle = async (enabled: boolean) => {
     try {
       await invoke("set_optimizer_enabled", { enabled });
-      setOptimEnabled(enabled);
+      onOptimEnabledChange(enabled);
       showFeedback(
         enabled
           ? "Optimization engine enabled."

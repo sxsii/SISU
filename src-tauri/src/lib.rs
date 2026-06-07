@@ -14,14 +14,16 @@ use std::sync::{Arc, Mutex};
 use tauri::Manager;
 use monitor::SystemState;
 use optimizer::OptimizerState;
+use rusqlite::Connection;
 
 // ============================================================
-// AppState
+// AppState — shared application state
 // ============================================================
 
 pub struct AppState {
     pub system:    Arc<Mutex<SystemState>>,
     pub optimizer: Arc<Mutex<OptimizerState>>,
+    pub db:        Arc<Mutex<Connection>>,
 }
 
 // ============================================================
@@ -30,8 +32,18 @@ pub struct AppState {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let optimizer_state = Arc::new(Mutex::new(OptimizerState::new()));
+    // Initialize the SQLite database synchronously before
+    // launching the async tasks. The DB is safe to open on
+    // the main thread since rusqlite is not async.
+    let db_conn = Connection::open(db::db_path())
+        .expect("Failed to open SISU database");
+    db::init_db(&db_conn)
+        .expect("Failed to initialize database schema");
+    let db_state = Arc::new(Mutex::new(db_conn));
+
+    let optimizer_state    = Arc::new(Mutex::new(OptimizerState::new()));
     let optimizer_for_loop = optimizer_state.clone();
+    let db_for_loop        = db_state.clone();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
@@ -55,6 +67,9 @@ pub fn run() {
             profiles::delete_profile,
             profiles::activate_profile,
             profiles::deactivate_profiles,
+            // Database
+            db::get_event_history,
+            db::get_performance_history,
         ])
         .setup(|app| {
             let handle = app.handle().clone();
@@ -65,9 +80,15 @@ pub fn run() {
                 handle.manage(AppState {
                     system:    system_state.clone(),
                     optimizer: optimizer_for_loop,
+                    db:        db_for_loop,
                 });
 
-                monitor::monitoring_loop(system_state, optimizer_state, handle).await;
+                monitor::monitoring_loop(
+                    system_state,
+                    optimizer_state,
+                    db_state,
+                    handle,
+                ).await;
             });
 
             Ok(())

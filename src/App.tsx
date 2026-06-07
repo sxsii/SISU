@@ -20,6 +20,7 @@ import Dashboard    from "./components/Dashboard";
 import ProcessTable from "./components/ProcessTable";
 import "./App.css";
 import ProfilesPanel from "./components/ProfilesPanel";
+import AlertsPanel from "./components/AlertsPanel";
 
 // ---- Tab configuration ----
 // Defined outside the component so it is not recreated on every render
@@ -47,6 +48,8 @@ export default function App() {
 
   // Dark mode toggle — default true (dark)
   const [dark, setDark] = useState(true);
+
+  const [optimEnabled, setOptimEnabled] = useState(false);
 
   // ---- Backend communication ----
 
@@ -159,23 +162,14 @@ export default function App() {
           <ProcessTable />
         )}
         {activeTab === "profiles" && (
-          <ProfilesPanel />
+          <ProfilesPanel
+            optimEnabled={optimEnabled}
+            onOptimEnabledChange={setOptimEnabled}
+          />
         )}
         {activeTab === "alerts" && (
-          <div className="placeholder-panel">
-            <div className="alerts-list">
-              {alerts.length === 0 && (
-                <p className="empty-state">No alerts. System is healthy.</p>
-              )}
-              {alerts.map((a) => (
-                <div key={a.id} className={`alert-item level-${a.level}`}>
-                  <span className="alert-level">{a.level.toUpperCase()}</span>
-                  <span className="alert-msg">{a.message}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+          <AlertsPanel alerts={alerts} onClear={() => setAlerts([])} />
+      )}
       </main>
     </div>
   );

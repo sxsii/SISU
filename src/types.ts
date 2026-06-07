@@ -87,6 +87,7 @@ export interface OptimizationProfile {
   restrictBackground: boolean;   // Whether to throttle background apps
   batterySaver:       boolean;   // Whether to enable power saving mode
   description:        string;    // Human-readable profile description
+  active:           boolean;   // Whether this profile is currently active
 }
 
 // ---- Utility Types ----

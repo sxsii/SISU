@@ -312,10 +312,17 @@ pub fn get_process_list(
 pub async fn monitoring_loop(
     state:     Arc<Mutex<SystemState>>,
     opt_state: Arc<Mutex<crate::optimizer::OptimizerState>>,
+    db_state:  Arc<Mutex<rusqlite::Connection>>,
     handle:    AppHandle,
 ) {
+    // Track how many 2-second ticks have passed so we can
+    // write a DB snapshot every 30 seconds (every 15 ticks)
+    // without adding a separate timer task.
+    let mut tick: u32 = 0;
+
     loop {
         tokio::time::sleep(Duration::from_secs(2)).await;
+        tick += 1;
 
         // Refresh and snapshot
         let snapshot = {
@@ -327,33 +334,56 @@ pub async fn monitoring_loop(
         // Emit snapshot to frontend
         let _ = handle.emit("system-update", &snapshot);
 
+        // Write performance snapshot to DB every 30 seconds
+        if tick % 15 == 0 {
+            let active_profile = crate::profiles::load_profiles()
+                .ok()
+                .and_then(|ps| ps.into_iter().find(|p| p.active))
+                .map(|p| p.name);
+
+            let db = db_state.lock().unwrap();
+            let _ = crate::db::log_snapshot(
+                &db,
+                snapshot.cpu.usage_percent,
+                snapshot.memory.usage_percent,
+                active_profile.as_deref(),
+            );
+        }
+
         // Run rule engine if optimization is enabled
         let opt_enabled = {
             opt_state.lock().unwrap().status.enabled
         };
 
         if opt_enabled {
-            // Load active profile
             let active_profile = crate::profiles::load_profiles()
                 .ok()
                 .and_then(|ps| ps.into_iter().find(|p| p.active));
 
-            // Build rule context
             let ctx = crate::rules::RuleContext {
                 snapshot:        &snapshot,
                 active_profile:  active_profile.as_ref(),
                 foreground_name: "",
             };
 
-            // Evaluate rules
             let actions = crate::rules::evaluate(&ctx);
 
-            // Execute actions if any were triggered
             if !actions.is_empty() {
                 let sys     = state.lock().unwrap();
                 let mut opt = opt_state.lock().unwrap();
                 crate::optimizer::execute_actions(
                     &actions, &sys, &mut opt, &handle
+                );
+
+                // Log that the optimizer ran to the database
+                let db = db_state.lock().unwrap();
+                let _ = crate::db::log_event(
+                    &db,
+                    "optimizer_cycle",
+                    None,
+                    "rule_evaluation",
+                    Some(&format!("{} actions triggered", actions.len())),
+                    true,
                 );
             }
         }
