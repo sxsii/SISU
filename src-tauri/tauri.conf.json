@@ -3,11 +3,11 @@
 
   "productName": "SISU",
   "version":     "0.1.0",
-  "identifier":  "com.sisu.app",
+  "identifier":  "com.sisu.desktop",
 
   "build": {
-    "frontendDist": "../dist",
-    "devUrl":       "http://localhost:1420",
+    "frontendDist":       "../dist",
+    "devUrl":             "http://localhost:1420",
     "beforeDevCommand":   "npm run dev",
     "beforeBuildCommand": "npm run build"
   },
@@ -21,11 +21,18 @@
         "minWidth":  900,
         "minHeight": 600,
         "resizable": true,
-        "center":    true
+        "center":    true,
+        "closable":  true
       }
     ],
     "security": {
       "csp": null
+    },
+    "trayIcon": {
+      "iconPath":       "icons/icon.png",
+      "iconAsTemplate": false,
+      "menuOnLeftClick": false,
+      "tooltip": "SISU — System Resource Manager"
     }
   },
 

@@ -13,6 +13,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { invoke }  from "@tauri-apps/api/core";
 import { listen }  from "@tauri-apps/api/event";
+import { Window } from "@tauri-apps/api/window";
 import {
   SystemSnapshot, Alert, TabName,
 } from "./types";
@@ -109,6 +110,8 @@ export default function App() {
 
   const unreadAlerts = alerts.filter((a) => a.level === "critical").length;
 
+const appWindow = Window.getCurrent();
+
   return (
     <div className={`app ${dark ? "dark" : "light"}`}>
 
@@ -142,15 +145,22 @@ export default function App() {
           ))}
         </nav>
 
-        <div className="header-actions">
-          <button
-            className="icon-btn"
-            title={dark ? "Switch to light mode" : "Switch to dark mode"}
-            onClick={() => setDark((d) => !d)}
-          >
-            {dark ? "☀" : "☾"}
-          </button>
-        </div>
+      <div className="header-actions">
+        <button
+          className="icon-btn"
+          title={dark ? "Switch to light mode" : "Switch to dark mode"}
+          onClick={() => setDark((d) => !d)}
+        >
+          {dark ? "☀" : "☾"}
+        </button>
+        <button
+          className="icon-btn"
+          title="Minimize to tray"
+          onClick={() => appWindow.hide()}
+        >
+          _
+        </button>
+      </div>
       </header>
 
       {/* ---- Main content area ---- */}
